@@ -1,0 +1,25 @@
+{
+  "name": "playly-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "build": "node server.js",
+    "start": "node server.js"
+  },
+  "author": "Tord Standnes",
+  "license": "None",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tordsta/playlyPrototype.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tordsta/playlyPrototype/issues"
+  },
+  "homepage": "https://github.com/tordsta/playlyPrototype#readme",
+  "dependencies": {
+    "path": "^0.12.7",
+    "express": "^4.17.1",
+    "ws": "^7.3.1"
+  }
+}
