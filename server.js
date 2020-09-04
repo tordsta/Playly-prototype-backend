@@ -3,17 +3,11 @@ const express = require('express');
 const https = require('http');
 
 const app = express();
-const PORT = 443;
+const PORT = 443; //default https port
 const SignalServer = require('./SignalServer');
 
-app.get('/main.js', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../dist/main.js'));
-});
-app.get('/index.css', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../dist/index.css'));
-});
 app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, '../dist/index.html'));
+  res.send("Hello! This is the playly backend.");
 });
 // Adding in a express server to HTTPS to allow HTTPS
 const server = https.createServer(
