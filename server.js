@@ -3,7 +3,7 @@ const express = require('express');
 const https = require('http');
 
 const app = express();
-const PORT = 443; //default https port
+const PORT = 3000; //default https port
 const SignalServer = require('./SignalServer');
 
 app.get('/', (req, res) => {
