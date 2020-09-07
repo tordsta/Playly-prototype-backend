@@ -76,6 +76,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: playly-service-ecs-service
-          cluster: Playly-service-cluster
+          service: playly-server-ecs-service
+          cluster: Playly-server-cluster
           wait-for-service-stability: true
