@@ -3,6 +3,7 @@ const express = require('express');
 const https = require('https');
 const fs = require("fs");
 const websocket = require("ws")
+const version = require("./package").version
 
 
 const httpsApp = express();
@@ -12,7 +13,7 @@ const httpsPORT = 3000; //change to 443
 //HTTPS enpoint for checking server status. 
 httpsApp.get('/up', (req, res) => {
   res.set("Access-Control-Allow-Origin", "*"); //Does not affect wss connections, only HTTPS
-  res.send("Hello! This is the playly backend. The backend is currently running.");
+  res.send("Hello! This is the Playly backend. The backend is currently running on version: " + version);
 });
 
 
