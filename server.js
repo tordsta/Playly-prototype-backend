@@ -31,16 +31,16 @@ httpsServer.listen(httpsPORT, () => {
 });
 
 
-// WEBSOCKET SECURED CONNECTION - On top of https server //
-const wss = new websocket.Server({ server: httpsServer, path: "/wss" });
-wss.on("connection", function(ws){
-  console.log("A client connected with wss on port, uri:", httpsPORT, "/wss")
-});
+// WEBSOCKET SECURED CONNECTION - On top of https server - For testing 
+//const wss = new websocket.Server({ server: httpsServer, path: "/wss" });
+//wss.on("connection", function(ws){
+//  console.log("A client connected with wss on port, uri:", httpsPORT, "/wss")
+//});
 
 
 
-// TODO create signal server for webrtc
-//const SignalServer = require('./SignalServer');
-//const signal = new SignalServer({ server });
-//signal.connect();
+// Signal server for webrtc
+const SignalServer = require('./SignalServer');
+const signal = new SignalServer({ server: httpsServer }); 
+signal.connect();
 
