@@ -15,6 +15,12 @@ httpsApp.get('/up', (req, res) => {
   res.set("Access-Control-Allow-Origin", "*"); //Does not affect wss connections, only HTTPS
   res.send("Hello! This is the Playly backend. The backend is currently running on version: " + version);
 });
+//For healt checks on AWS
+httpsApp.get('/', (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*"); //Does not affect wss connections, only HTTPS
+  res.send("Hello!");
+});
+
 
 
 // HTTPS WEB SERVER
