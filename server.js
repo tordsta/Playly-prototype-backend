@@ -8,7 +8,7 @@ const version = require("./package").version
 
 
 const httpsApp = express();
-const httpsPORT = 3000; //change to 443
+const httpsPORT = 3000; 
 
 //For healt checks on AWS
 httpsApp.get('/', (req, res) => {
@@ -34,7 +34,7 @@ const httpsServer = http.createServer(
 );
 
 httpsServer.listen(httpsPORT, () => {
-  console.log('\nListening for HTTPS requests on PORT: ', httpsPORT);
+  console.log('\nListening for messages on PORT: ', httpsPORT);
 });
 
 
@@ -45,9 +45,11 @@ httpsServer.listen(httpsPORT, () => {
 //});
 
 
-
-// Signal server for webrtc
+// Signal server setup for webrtc
 const SignalServer = require('./SignalServer');
 const signal = new SignalServer({ server: httpsServer }); 
+
+// Starting ws service
 signal.connect();
+ 
 
