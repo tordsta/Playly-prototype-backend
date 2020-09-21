@@ -14,7 +14,7 @@ class SignalServer {
    */
   constructor(config) {
     this._webSocket = this._setUpServer(config);
-    this._channels = {};
+    this._channels = {}; //json object with all channels/rooms. Where each room has a json object of users/websocket connnections
     this._users = 0;
   }
 
@@ -31,16 +31,16 @@ class SignalServer {
       currentClient.send(this._userConnected());
 
       currentClient.on('message', (data) => {
-        console.log('\nDATA: ', data);
+        //console.log('\nDATA: ', data);
         const parsedData = JSON.parse(data);
 
         switch (parsedData.type) {
-          case Constants.TYPE_CHANNEL:
+          case Constants.TYPE_CHANNEL: //"type": "ROOM"
             // Creation of a new channel or joining channel
-            const { roomKey } = parsedData.payload;
+            const { roomKey } = parsedData.payload; //makes an js object and assignes the roomkey value from parsed json
             console.log('New client has joined room ', roomKey);
-            // if room exist and room is not full (max of 2 clients per channel)
-            if (this._channels[roomKey] && Object.keys(this._channels[roomKey]).length < 2) {
+            // if room exist 
+            if (this._channels[roomKey]) {
               this._handleExistingChannel(parsedData.payload, currentClient);
             } else if (!this._channels[roomKey]) {
               // if room doesn't exist
@@ -52,7 +52,6 @@ class SignalServer {
             const clientsInChannel = this._channels[parsedData.payload.roomKey];
             this._broadcast(data, currentClient, clientsInChannel);
         }
-
       });
     });
   }
@@ -76,6 +75,7 @@ class SignalServer {
 
   _close() {
     this._webSocket.on('close', () => {
+      //TODO remove user from room, if room is empty delete room
 
     });
   }
@@ -101,7 +101,7 @@ class SignalServer {
    */
   _userConnected() {
     const initialMessage = { type: Constants.NEW_USER, id: this._users };
-    this._users += 1;
+    this._users += 1; //TODO implement UUidv6, and seperate out from the number of users on the server
     return JSON.stringify(initialMessage);
   }
 
@@ -117,15 +117,34 @@ class SignalServer {
    * channel, will notify the client who created the channel to begin a connection.
    */
   _handleExistingChannel({ roomKey, socketID }, currentClient) {
-    console.log('New client has joined room ', roomKey);
     // client joins the channel
     this._channels[roomKey][socketID] = currentClient;
-    // set channel ready object
-    const ready = { type: Constants.TYPE_CONNECTION, startConnection: true };
-    // notify client that created the channel to begin WebRTC Connection
+
+    //Create RTC connections to existing clients for the new client
     const clients = this._channels[roomKey];
-    const data = JSON.stringify(ready);
-    this._broadcast(data, currentClient, clients);
+    //console.log(clients);
+
+    for(const [clientID, client] of Object.entries(this._channels[roomKey])) {
+      //console.log("looop", clientID, client);
+      //console.log("current client ", currentClient);
+      
+      if(client != currentClient){
+        // TODO: make one on one RTC connection setup 
+        // TODO: make frontend handle mulitple users/userIDs for webRTC connections  
+        // const newConnections = { type: "CONNECTION", startConnection: true, userID: clientID}
+
+        // old based of 2 user per channel - set channel ready object
+        const ready = { type: Constants.TYPE_CONNECTION, startConnection: true };
+        
+        //Notify a client that new client is ready to begin WebRTC Connection
+        const data = JSON.stringify(ready);
+        this._broadcast(data, currentClient, {key: client});
+      } 
+      
+    }    
+
+    console.log("Number of clients in room", roomKey, ":", Object.keys(this._channels[roomKey]).length);
+    //console.log("Clients: ", clients);
   }
 
   /**
@@ -138,7 +157,7 @@ class SignalServer {
     // create new channel & store current client
     this._channels[roomKey] = { [socketID]: currentClient };
     console.log('New room has been created with key: ', roomKey, ' by User: ', socketID);
-    console.log('Room Count: ', Object.keys(this._channels).length);
+    console.log('Number of rooms on server: ', Object.keys(this._channels).length); //Channels is the same as rooms. Each channel is an JS object. 
   }
 }
 
