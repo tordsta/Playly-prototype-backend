@@ -18,8 +18,9 @@
   },
   "homepage": "https://github.com/tordsta/playlyPrototype#readme",
   "dependencies": {
-    "path": "^0.12.7",
     "express": "^4.17.1",
+    "path": "^0.12.7",
+    "uuid": "^8.3.0",
     "ws": "^7.3.1"
   }
 }

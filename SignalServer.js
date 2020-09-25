@@ -2,6 +2,8 @@
 /* eslint-disable no-underscore-dangle */
 const WebSocket = require('ws');
 const { Constants } = require('./enums');
+const { v4:uuidv4, stringify } = require('uuid');
+const { response } = require('express');
 
 class SignalServer {
   /**
@@ -15,7 +17,21 @@ class SignalServer {
   constructor(config) {
     this._webSocket = this._setUpServer(config);
     this._channels = {}; //json object with all channels/rooms. Where each room has a json object of users/websocket connnections
-    this._users = 0;
+    this._users = {}; //{id: websocket, ..., ...}
+  }
+
+  /**
+   * @param {Object} config
+   * #setUpServer is a private method that creates a new instance of a WebSocket utilizing
+   * the config parameter if included, otherwise utilizes default port.
+   * @returns {WebSocket.Server}
+   */
+  _setUpServer(config) {
+    if (!config) return new WebSocket.Server({ port: Constants.PORT });
+    else if (config.port) return new WebSocket.Server({ port: config.port });
+    else if (config.server) return new WebSocket.Server({ server: config.server });
+    // return an error for wrong input field
+    else return console.log('ERROR');
   }
 
   /**
@@ -28,33 +44,66 @@ class SignalServer {
   connect() {
     this._webSocket.on('connection', (currentClient, request) => {
       console.log('User connected');
-      currentClient.send(this._userConnected());
+      currentClient.send(this._userConnected(currentClient));
 
       currentClient.on('message', (data) => {
         //console.log('\nDATA: ', data);
         const parsedData = JSON.parse(data);
 
         switch (parsedData.type) {
-          case Constants.TYPE_CHANNEL: //"type": "ROOM"
-            // Creation of a new channel or joining channel
+          //TODO: change to auto creation of room key
+          case "ROOM": //JOINING OR CREATING A ROOM 
             const { roomKey } = parsedData.payload; //makes an js object and assignes the roomkey value from parsed json
-            console.log('New client has joined room ', roomKey);
-            // if room exist 
-            if (this._channels[roomKey]) {
-              this._handleExistingChannel(parsedData.payload, currentClient);
-            } else if (!this._channels[roomKey]) {
-              // if room doesn't exist
+            
+            // create new room
+            if(!this._channels[roomKey]) {
               this._createChannel(parsedData.payload, currentClient);
             }
+            // join existing room
+            if (this._channels[roomKey]) {
+              this._handleUserJoiningChannel(parsedData.payload, currentClient);
+            } 
             break;
+
+          case "PEER_CONNECTION":
+            let peerSender = parsedData.payload.socketID;  
+            let peerReceiver = parsedData.payload.message; 
+
+            this._startRTCConnection(peerSender, peerReceiver);
+            break;
+
+          //START HERE!!!!! THIS ONE IS NOT IMPLEMENTED
+          case "ONE_RECIVER":
+            //const sender = users.currentClient; //gets id for user 
+            let receiver = parsedData.payload.receiver; //return user id for receiver
+            this.users[receiver].send(data)
+            break;
+
+          //Broadcasts to all users in a room 
           default:
-            // Sending messages to client in existing channel
-            //TODO - this needs to be directed to one client at the time when establishing an connection
-            //TODO cont. - many make an own switchcase for RTC establishing - Offer, awnser, ice candidate
             const clientsInChannel = this._channels[parsedData.payload.roomKey];
-            this._broadcast(data, currentClient, clientsInChannel);
+            this._broadcast(data, currentClient, clientsInChannel);              
         }
       });
+    });
+  }
+
+  /**
+   * #userConnected is a private method that sets a new ID to send to the new user upon 
+   * connection.
+   * @returns {String}
+   */
+  _userConnected(currentClient) {
+    const id = uuidv4();
+    this._users[id] = currentClient;
+    const initialMessage = { type: Constants.NEW_USER, id: id };
+    return JSON.stringify(initialMessage);
+  }
+
+  _close() {
+    this._webSocket.on('close', () => {
+      //TODO remove user from room, if room is empty delete room
+
     });
   }
 
@@ -75,36 +124,26 @@ class SignalServer {
     });
   }
 
-  _close() {
-    this._webSocket.on('close', () => {
-      //TODO remove user from room, if room is empty delete room
-
-    });
-  }
-
   /**
-   * @param {Object} config
-   * #setUpServer is a private method that creates a new instance of a WebSocket utilizing
-   * the config parameter if included, otherwise utilizes default port.
-   * @returns {WebSocket.Server}
+   * @param {String} roomKey is used to create a channel.
+   * @param {Integer} socketID is an ID thats created upon a new user connecting to
+   * the Signaling Server.
+   * @param {WebSocket} currentClient is the client who emitted data to the SignalServer.
    */
-  _setUpServer(config) {
-    if (!config) return new WebSocket.Server({ port: Constants.PORT });
-    else if (config.port) return new WebSocket.Server({ port: config.port });
-    else if (config.server) return new WebSocket.Server({ server: config.server });
-    // return an error for wrong input field
-    else return console.log('ERROR');
-  }
 
-  /**
-   * #userConnected is a private method that sets a new ID to send to the new user upon 
-   * connection.
-   * @returns {String}
-   */
-  _userConnected() {
-    const initialMessage = { type: Constants.NEW_USER, id: this._users };
-    this._users += 1; //TODO implement UUidv6, and seperate out from the number of users on the server
-    return JSON.stringify(initialMessage);
+   //socketID matches userID
+   _createChannel({ roomKey, socketID }, currentClient) {
+    // create new channel & store current client
+    this._channels[roomKey] = { [socketID]: currentClient };
+
+    //Update client on users in room
+    const usersInRoom = { type: "USERS_IN_ROOM", payload: Object.keys(this._channels[roomKey]) };
+    const data = JSON.stringify(usersInRoom);
+    const clients = this._channels[roomKey];
+    this._broadcast(data, null, clients);
+
+    console.log('New room has been created with key: ', roomKey, ' by User: ', socketID);
+    console.log('Number of rooms on server: ', Object.keys(this._channels).length); //Channels is the same as rooms. Each channel is an JS object. 
   }
 
   /**
@@ -118,44 +157,33 @@ class SignalServer {
    * #handleExistingChannel is a private method that upon a user joining an existing
    * channel, will notify the client who created the channel to begin a connection.
    */
-  _handleExistingChannel({ roomKey, socketID }, currentClient) {
-    // client joins the channel
+  _handleUserJoiningChannel({ roomKey, socketID }, currentClient) {
+    // Add client to channel
     this._channels[roomKey][socketID] = currentClient;
 
-    //Create RTC connections to existing clients for the new client
-    const clients = this._channels[roomKey];
-    //console.log(clients);
-
-    for(const [clientID, client] of Object.entries(this._channels[roomKey])) {
-      //console.log("looop", clientID, client);
-      //console.log("current client ", currentClient);
-      
-      if(client != currentClient){
-        // TODO: make one on one RTC connection setup 
-        // TODO: make frontend handle mulitple users/userIDs for webRTC connections  }
-        const ready = { type: Constants.TYPE_CONNECTION, startConnection: true };
-        
-        //Notify a client that new client is ready to begin WebRTC Connection
-        const data = JSON.stringify(ready);
-        this._broadcast(data, currentClient, {key: client});
-      } 
-    }    
-
+    //Update the last client on users
+    const usersInRoom = { type: "USERS_IN_ROOM", payload: Object.keys(this._channels[roomKey]) };
+    const data = JSON.stringify(usersInRoom);
+    currentClient.send(data);
+    //const clients = this._channels[roomKey];
+    //this._broadcast(data, null, clients);
+    console.log('New client has joined room ', roomKey);
     console.log("Number of clients in room", roomKey, ":", Object.keys(this._channels[roomKey]).length);
-    //console.log("Clients: ", clients);
   }
 
-  /**
-   * @param {String} roomKey is used to create a channel.
-   * @param {Integer} socketID is an ID thats created upon a new user connecting to
-   * the Signaling Server.
-   * @param {WebSocket} currentClient is the client who emitted data to the SignalServer.
-   */
-  _createChannel({ roomKey, socketID }, currentClient) {
-    // create new channel & store current client
-    this._channels[roomKey] = { [socketID]: currentClient };
-    console.log('New room has been created with key: ', roomKey, ' by User: ', socketID);
-    console.log('Number of rooms on server: ', Object.keys(this._channels).length); //Channels is the same as rooms. Each channel is an JS object. 
+  _startRTCConnection(sender, receiver){
+    console.log(sender)
+    console.log(receiver)
+    //Notify a client that new client is ready to begin WebRTC Connection
+    const ready = { 
+      type: Constants.TYPE_CONNECTION, 
+      startConnection: true, 
+      sender: sender, 
+      receiver: receiver,
+    };
+    const data = JSON.stringify(ready);
+    const clients = { [sender]:this._users[sender], [receiver]:this._users[receiver] }
+    this._broadcast(data, null, clients);
   }
 }
 
