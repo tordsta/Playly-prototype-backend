@@ -49,6 +49,8 @@ class SignalServer {
             break;
           default:
             // Sending messages to client in existing channel
+            //TODO - this needs to be directed to one client at the time when establishing an connection
+            //TODO cont. - many make an own switchcase for RTC establishing - Offer, awnser, ice candidate
             const clientsInChannel = this._channels[parsedData.payload.roomKey];
             this._broadcast(data, currentClient, clientsInChannel);
         }
@@ -130,17 +132,13 @@ class SignalServer {
       
       if(client != currentClient){
         // TODO: make one on one RTC connection setup 
-        // TODO: make frontend handle mulitple users/userIDs for webRTC connections  
-        // const newConnections = { type: "CONNECTION", startConnection: true, userID: clientID}
-
-        // old based of 2 user per channel - set channel ready object
+        // TODO: make frontend handle mulitple users/userIDs for webRTC connections  }
         const ready = { type: Constants.TYPE_CONNECTION, startConnection: true };
         
         //Notify a client that new client is ready to begin WebRTC Connection
         const data = JSON.stringify(ready);
         this._broadcast(data, currentClient, {key: client});
       } 
-      
     }    
 
     console.log("Number of clients in room", roomKey, ":", Object.keys(this._channels[roomKey]).length);
