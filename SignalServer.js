@@ -136,7 +136,7 @@ class SignalServer {
     // create new channel & store current client
     this._channels[roomKey] = { [socketID]: currentClient };
 
-    //Update client on users in room
+    //Update createor client on users in room
     const usersInRoom = { type: "USERS_IN_ROOM", payload: Object.keys(this._channels[roomKey]) };
     const data = JSON.stringify(usersInRoom);
     const clients = this._channels[roomKey];
@@ -161,7 +161,8 @@ class SignalServer {
     // Add client to channel
     this._channels[roomKey][socketID] = currentClient;
 
-    //Update the last client on users
+    //Update the last client on users in room
+    //This means the user joining will be giving offers to the other clients. This way we avoid conflicting communication.
     const usersInRoom = { type: "USERS_IN_ROOM", payload: Object.keys(this._channels[roomKey]) };
     const data = JSON.stringify(usersInRoom);
     currentClient.send(data);
@@ -172,8 +173,8 @@ class SignalServer {
   }
 
   _startRTCConnection(sender, receiver){
-    console.log(sender)
-    console.log(receiver)
+    console.log("Start rtc connection sender:", sender)
+    console.log("start rtc connection receiver:", receiver)
     //Notify a client that new client is ready to begin WebRTC Connection
     const ready = { 
       type: Constants.TYPE_CONNECTION, 
@@ -182,6 +183,7 @@ class SignalServer {
       receiver: receiver,
     };
     const data = JSON.stringify(ready);
+    //sends message to both?? both are ready to connect??
     const clients = { [sender]:this._users[sender], [receiver]:this._users[receiver] }
     this._broadcast(data, null, clients);
   }
