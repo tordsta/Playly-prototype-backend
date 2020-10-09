@@ -24,7 +24,7 @@ httpsApp.get('/up', (req, res) => {
 
 //TODO: change back to https
 // HTTPS WEB SERVER 
-const httpsServer = http.createServer( 
+const httpsServer = https.createServer( 
   // Key and cert is required to allow localhost to run on HTTPS otherwise you either get an error or a certified invalid warning
   //{
   //  key: fs.readFileSync(path.resolve(process.env.HOME, '.localhost-ssl/localhost.key')),
