@@ -4,6 +4,7 @@ const WebSocket = require('ws');
 const { Constants } = require('./enums');
 const { v4:uuidv4, stringify } = require('uuid');
 const { response } = require('express');
+const unoParty = require("./games/UnoParty/sockets/unoPartyTranslator");
 
 class SignalServer {
   constructor(config) {
@@ -52,10 +53,24 @@ class SignalServer {
             break;
 
           //TODO Make getUsersInRoom() case
+
+          case "UNO_PARTY":
+            //Room has to exist before a game can begin
+            if(this._channels[parsedData.payload.roomKey]){
+              let currentRoom = this._channels[parsedData.payload.roomKey];
+              unoParty(currentClient, currentRoom, parsedData.payload, this._broadcast);
+            }
+            break;
           
           default: //Broadcasts to all users in a room 
-            const clientsInChannel = this._channels[parsedData.payload.roomKey];
-            this._broadcast(data, currentClient, clientsInChannel);              
+            //console.log(parsedData)            
+            try{
+              const clientsInChannel = this._channels[parsedData.payload.roomKey];
+              this._broadcast(data, currentClient, clientsInChannel);                
+            } 
+            catch(e) {
+              console.log("error", e)
+            }
         }
       });
     });
