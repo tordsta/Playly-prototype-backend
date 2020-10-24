@@ -56,12 +56,12 @@ class SignalServer {
 
           case "UNO_PARTY":
             //Room has to exist before a game can begin
-            console.log(parsedData)
+            //console.log(parsedData)
             if(this._channels[parsedData.roomKey]){
               let currentRoom = this._channels[parsedData.roomKey];
               let senderID = parsedData.senderID;
               let roomKey = parsedData.roomKey;
-              unoParty(currentClient, senderID, currentRoom, parsedData.payload, this._broadcast, roomKey);
+              unoParty(currentClient, senderID, currentRoom, parsedData.payload, this._broadcast, roomKey, this._users);
             }
             break;
           

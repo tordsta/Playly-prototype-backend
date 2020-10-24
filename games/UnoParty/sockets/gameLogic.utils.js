@@ -9,7 +9,8 @@ const colors = [
   'rgb(240, 206, 7)'
 ];
 
-const sendAvailableGames = currentGames => {
+//This works on both an array of games and a single one
+const sendAvailableGames = (currentGames, sendGameMessage) => {
   const availableGames = Object.values(currentGames).filter(
     ({
       playerCount,
@@ -33,7 +34,9 @@ const sendAvailableGames = currentGames => {
       }
     }
   );
-  io.emit('availableGames', availableGames ? availableGames : []);
+  const payload = availableGames ? availableGames : [];
+  sendGameMessage({type: 'availableGames', payload: {payload}});
+  //io.emit('availableGames', availableGames ? availableGames : []);
 };
 
 const generateRandomCard = () => {
@@ -86,6 +89,8 @@ const generateRandomCard = () => {
   return { key: uniqid(), ...randomCard };
 };
 
+//If two parameter is passed it checks if the player.name is correct.
+//If one parameter is passed it checks all if the number of cards are correct
 const sanitizePlayer = (currentGame, username) => {
   return currentGame.players.map(player => {
     if (player.name === username) {

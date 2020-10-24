@@ -7,13 +7,18 @@ const { sendAvailableGames } = require('./gameLogic.utils');
 let currentGames = {};
 
 
-function unoParty(currentClientSocket, senderID, currentRoom, payload, broadcast, roomKey){
+function unoParty(currentClientSocket, senderID, currentRoom, payload, broadcast, roomKey, users){
 
   //parse and treat payload from message
-  console.log("This is a game message:", payload);
+  console.log("Client game message:", payload);
 
   //create sender function something like this
-  
+  function sendGameMessageTo(message, reciverID){
+    let gameMessage = JSON.stringify({type: "UNO_PARTY", roomKey: roomKey, senderID: senderID, payload: message});
+    let reciver = users[reciverID]
+    reciver.send(gameMessage);
+  }
+
   function sendGameMessage(message){
     let gameMessage = JSON.stringify({type: "UNO_PARTY", roomKey: roomKey, senderID: senderID, payload: message});
     currentClientSocket.send(gameMessage);
@@ -24,10 +29,27 @@ function unoParty(currentClientSocket, senderID, currentRoom, payload, broadcast
     broadcast(gameMessage, currentClientSocket, currentRoom)
   }
 
-  sendGameMessage("hello world");
+  function broadcastAllGameMessage(message){
+    let gameMessage = JSON.stringify({type: "UNO_PARTY", roomKey: roomKey, senderID: senderID, payload: message});
+    broadcast(gameMessage, null, currentRoom)
+  }
+
+
+  //console.log("current room", currentRoom)
+  //sendGameMessage("hello world");
 
   //create game for a room
-  //gameLogic(currentGames, payload, sendGameMessage, broadcastGameMessage);
+  gameLogic(
+    currentGames, 
+    roomKey, 
+    payload, 
+    sendGameMessage, 
+    broadcastGameMessage, 
+    senderID, 
+    sendGameMessageTo, 
+    broadcastAllGameMessage,
+    currentRoom
+  );
 
   //comparison to prev
   //gameLogic(currentGames, socket, username, sendMessage);
